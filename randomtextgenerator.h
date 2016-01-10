@@ -2,15 +2,17 @@
 #define RANDOMTEXTGENERATOR_H
 
 #include <map>
+#include <vector>
 #include <string>
 #include <tuple>
 
 class RandomTextGenerator
 {
-    std::map<std::tuple<std::string, std::string>, std::map<std::string, int>> m_marcov_chains;
+    std::map<std::tuple<std::string, std::string>, std::vector<std::string>> m_marcov_chains;
 public:
     RandomTextGenerator(std::istream &learning_data);
-    std::map<std::string, int> next_options(std::tuple<std::string, std::string> tail);
+    std::vector<std::string> possible_successors(std::tuple<std::string, std::string> starting_with);
+    std::string generate_text(std::tuple<std::string, std::string> starting_with, int max_words);
 };
 
 #endif // RANDOMTEXTGENERATOR_H

@@ -3,6 +3,8 @@
 #include <sstream>
 #include <iostream>
 #include <tuple>
+#include <algorithm>
+#include <cstdlib>
 
 RandomTextGenerator::RandomTextGenerator(std::istream &learning_data)
 {
@@ -12,37 +14,55 @@ RandomTextGenerator::RandomTextGenerator(std::istream &learning_data)
 
     while(learning_data >> token)
     {
-        auto tail = std::make_tuple(pptoken, ptoken);
-        auto it = m_marcov_chains.find(tail);
+        auto starting_with = std::make_tuple(pptoken, ptoken);
+        auto it = m_marcov_chains.find(starting_with);
         if(it != m_marcov_chains.end())
         {
-            auto token_it = (*it).second.find(token);
-            if(token_it != (*it).second.end())
+            auto &successors = (*it).second;
+            if(std::find(successors.begin(), successors.end(), token) == successors.end())
             {
-                (*token_it).second += 1;
-            }
-            else
-            {
-                (*it).second.insert(std::make_pair(token, 1));
+                successors.push_back(token);
             }
         }
         else
         {
-            std::map<std::string, int> heads;
-            heads.insert(std::make_pair(token, 1));
-            m_marcov_chains.insert(std::make_pair(tail, heads));
+            m_marcov_chains.insert({starting_with, {token}});
         }
         pptoken = ptoken;
         ptoken = token;
     }
 }
 
-std::map<std::string, int> RandomTextGenerator::next_options(std::tuple<std::string, std::string> tail)
+std::vector<std::string> RandomTextGenerator::possible_successors(std::tuple<std::string, std::string> starting_with)
 {
-    auto it = m_marcov_chains.find(tail);
+    auto it = m_marcov_chains.find(starting_with);
     if(it == m_marcov_chains.end())
     {
         return { };
     }
     return (*it).second;
+}
+
+std::string RandomTextGenerator::generate_text(std::tuple<std::string, std::string> starting_with, int max_words)
+{
+    std::string pptoken = std::get<0>(starting_with);
+    std::string ptoken = std::get<1>(starting_with);
+    std::string text = pptoken + " " + ptoken;
+    std::string token;
+
+    while(max_words--)
+    {
+        auto possible_tokens = possible_successors(starting_with);
+        size_t tokens_count = possible_tokens.size();
+        if(tokens_count == 0)
+            break;
+        int index = rand() % possible_tokens.size();
+        token = possible_tokens[index];
+        text += " " + token;
+        pptoken = ptoken;
+        ptoken = token;
+        starting_with = std::make_tuple(pptoken, token);
+    }
+
+    return text;
 }
